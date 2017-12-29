@@ -10,10 +10,12 @@ message PBMessage
 		Join = 1;
 		Leave = 2;
 		NewChat = 3;
+		StartingState = 4;
 	}
 
-	MessageType type = 1;		// type of the message; should be in all protobufs
-	string Name = 2;			// name of the user; should not be in all messages (ie newchats)
-	string Message = 3;			// the text of the message; ie for newchats
+	MessageType type = 1;			// type of the message; should be in all protobufs
+	string Name = 2;				// name of the user; should not be in all messages (ie newchats)
+	string Message = 3;				// the text of the message; ie for newchats
+	repeated string Messages = 4;	// many messages; returned on join
 
 }

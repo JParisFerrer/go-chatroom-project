@@ -9,5 +9,4 @@ func main() {
 
 	fmt.Println("Client!")
 
-	shared.Temp()
 }
