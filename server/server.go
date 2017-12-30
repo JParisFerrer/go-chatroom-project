@@ -210,6 +210,7 @@ func handleClient(id uint64) {
 
 				case pb.PBMessage_NewChat:
 					{
+						fmt.Printf("New chat! %s\n", msg.Message)
 						var newString string
 						newString = fmt.Sprintf("[%v][%s] %s", time.Now(), clientNames[id], msg.Message)
 
@@ -301,6 +302,14 @@ func handleNewClient(con net.Conn) {
 	log.Printf("Starting session with %v", con)
 
 	if msg.Type == pb.PBMessage_Join {
+		if !shared.ValidateUsername(msg.Name) {
+
+			log.Printf("Bad username from %v: '%s'", con, msg.Name)
+
+			con.Close()
+			return
+		}
+
 		m_.Lock()
 
 		id := nextClientId
@@ -308,7 +317,7 @@ func handleNewClient(con net.Conn) {
 
 		clientSockets[id] = con
 		clientReadChannels[id] = make(chan pb.PBMessage)
-		clientWriteChannels[id] = make(chan pb.PBMessage)
+		clientWriteChannels[id] = make(chan pb.PBMessage, 1024)
 		clientErrorChannels[id] = make(chan error)
 
 		clientNames[id] = msg.Name
@@ -333,6 +342,14 @@ func main() {
 	listener, err := net.Listen("tcp", service)
 
 	shared.CheckErrorFatal("main Listen", err)
+
+	clientReadChannels = make(map[uint64]chan pb.PBMessage)
+	clientWriteChannels = make(map[uint64]chan pb.PBMessage)
+	clientErrorChannels = make(map[uint64]chan error)
+	clientSockets = make(map[uint64]net.Conn)
+	clientNames = make(map[uint64]string)
+
+	log.Printf("Server up and running on port %d\n", shared.ServerPort)
 
 	for {
 		conn, err := listener.Accept()

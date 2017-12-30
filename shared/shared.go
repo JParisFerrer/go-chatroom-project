@@ -143,3 +143,23 @@ func SendProtoMessage(msg proto.Message, conn net.Conn) error {
 
 	return nil
 }
+
+// assumes ascii input from terminal
+func ValidateUsername(name string) bool {
+
+	if len(name) == 0 || len(name) > 16 {
+
+		return false
+	}
+
+	for _, c := range name {
+
+		// only allow this subset of ascii; alphanumeric + some symbols
+		if !(c >= 32 && c <= 57) && !(c >= 64 && c <= 90) && !(c >= 97 && c <= 122) {
+
+			return false
+		}
+	}
+
+	return true
+}
