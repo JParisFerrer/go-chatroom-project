@@ -34,6 +34,35 @@ func CheckErrorFatal(info string, err error) bool {
 	return false
 }
 
+// send all or error
+func sendBytes(conn net.Conn, data []byte) error {
+
+	var toSend uint64 = uint64(len(data))
+	var totalSent uint64 = 0
+
+	for totalSent < toSend {
+
+		sent, err := conn.Write(data[totalSent:])
+
+		if err != nil {
+			// done, EOF, etc
+			if totalSent+uint64(sent) == toSend {
+
+				return nil
+			}
+
+			// else return error
+			return err
+		}
+
+		totalSent += uint64(sent)
+	}
+
+	return nil
+
+}
+
+// read all or error
 func readBytes(conn net.Conn, toRead uint64) ([]byte, error) {
 
 	var totalRead uint64 = 0
@@ -58,13 +87,13 @@ func readBytes(conn net.Conn, toRead uint64) ([]byte, error) {
 	return buff[:], nil
 }
 
-func ReadProtoMessage(conn net.Conn) (*pb.PBMessage, error) {
+func ReadProtoMessage(conn net.Conn) (pb.PBMessage, error) {
 	// read 8 little-endian bytes for length, then that many bytes
 	lenBytes, err := readBytes(conn, 8)
 
 	if CheckErrorInfo("ReadProtoMessage size", err) {
 
-		return nil, err
+		return pb.PBMessage{}, err
 	}
 
 	// else read the bytes
@@ -74,17 +103,43 @@ func ReadProtoMessage(conn net.Conn) (*pb.PBMessage, error) {
 
 	if CheckErrorInfo("ReadProtoMessage data", err) {
 
-		return nil, err
+		return pb.PBMessage{}, err
 	}
 
 	// else we're good, construct the protobuf and return it
-	var msg *pb.PBMessage = &pb.PBMessage{}
+	var msg pb.PBMessage = pb.PBMessage{}
 
-	err = proto.Unmarshal(data, msg)
+	err = proto.Unmarshal(data, &msg)
 	if CheckErrorInfo("ReadProtoMessage parse", err) {
 
-		return nil, err
+		return pb.PBMessage{}, err
 	}
 
 	return msg, nil
+}
+
+func SendProtoMessage(msg proto.Message, conn net.Conn) error {
+
+	data, err := proto.Marshal(msg)
+	if CheckErrorInfo("SendProtoMessage parse", err) {
+
+		return err
+	}
+
+	var lenBuf [8]byte
+	binary.LittleEndian.PutUint64(lenBuf[:], uint64(len(data)))
+
+	err = sendBytes(conn, lenBuf[:])
+	if CheckErrorInfo("SendProtoMessage size", err) {
+
+		return err
+	}
+
+	err = sendBytes(conn, data)
+	if CheckErrorInfo("SendProtoMessage data", err) {
+
+		return err
+	}
+
+	return nil
 }
