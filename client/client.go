@@ -10,14 +10,11 @@ import (
 	"net"
 	"os"
 	"strings"
-	"sync"
 )
 
 var chatLog []string
 var writeChan chan pb.PBMessage
 var netChan chan string
-
-var m_ sync.Mutex
 
 func sendLoop(conn net.Conn) {
 
@@ -151,7 +148,6 @@ func main() {
 
 		case newChat := <-termChan:
 			{
-				m_.Lock()
 				// send to server
 				msg := pb.PBMessage{}
 				msg.Type = pb.PBMessage_NewChat
@@ -171,18 +167,13 @@ func main() {
 
 				drawChats()
 
-				m_.Unlock()
 			}
 		case newChat := <-netChan:
 			{
 				// redraw
-				m_.Lock()
-
 				chatLog = append(chatLog, newChat)
 
 				drawChats()
-
-				m_.Unlock()
 			}
 
 		}
